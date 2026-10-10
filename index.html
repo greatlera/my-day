@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>My Day</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="My Day">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#121217">
+
+  <!-- Ссылка на отдельный manifest.json -->
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- Иконка без обводки -->
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+
+  <style>
+    :root {
+      --bg: #101015;
+      --card-bg: #1b1b22;
+      --card-border: #282834;
+      --text-main: #f3f4f6;
+      --text-muted: #9496a1;
+      --primary: #4f46e5;
+      --primary-light: #6366f1;
+      --radius: 18px;
+
+      --tag-work: #6366f1;
+      --tag-home: #14b8a6;
+      --tag-hobby: #22c55e;
+      --tag-meetings: #3b82f6;
+      --tag-care: #ec4899;
+      --tag-rest: #a855f7;
+      --tag-other: #71717a;
+      --tag-event: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top, 16px) 16px calc(env(safe-area-inset-bottom, 24px) + 70px) 16px;
+      overflow-x: hidden;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 2px 2px 2px;
+    }
+
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-bar {
+      display: flex;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .calendar-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .cal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .cal-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px 10px;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    .nav-btn:active {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .cal-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .day-cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .day-cell:active {
+      transform: scale(0.95);
+    }
+
+    .day-cell-num {
+      font-size: 0.95rem;
+      font-weight: 500;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .day-cell.other-month .day-cell-num {
+      color: #43444f;
+    }
+
+    .day-cell.today .day-cell-num {
+      color: var(--primary-light);
+      font-weight: 700;
+    }
+
+    .day-cell.selected {
+      background: var(--primary) !important;
+    }
+
+    .day-cell.selected .day-cell-num {
+      color: #fff !important;
+      font-weight: 700;
+    }
+
+    .dots-container {
+      position: absolute;
+      bottom: 5px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2.5px;
+      height: 4px;
+      pointer-events: none;
+    }
+
+    .dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .content-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section-title-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .task-counter {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      list-style: none;
+      overflow-y: auto;
+      max-height: 400px;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      padding: 30px 0;
+      line-height: 1.5;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.025);
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .task-tag-bar {
+      width: 4px;
+      height: 38px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .task-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      user-select: text;
+    }
+
+    .task-header-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .task-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .task-item.completed .task-title {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .tag-badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .task-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .task-notes {
+      font-size: 0.8rem;
+      color: #b3b4bf;
+      margin-top: 2px;
+      line-height: 1.35;
+      white-space: pre-line;
+    }
+
+    .checkbox-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--text-muted);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    .task-item.completed .checkbox-btn {
+      border-color: var(--primary);
+      background: var(--primary);
+    }
+
+    .checkbox-btn svg {
+      display: none;
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: white;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .task-item.completed .checkbox-btn svg {
+      display: block;
+    }
+
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: #61626f;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      margin-top: 2px;
+    }
+
+    .delete-btn:active {
+      color: #ef4444;
+    }
+
+    .btn-fab {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 20px) + 16px);
+      right: 20px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      box-shadow: 0 10px 24px rgba(79, 70, 229, 0.45);
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 50;
+      transition: transform 0.15s;
+    }
+
+    .btn-fab:active {
+      transform: scale(0.92);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(5px);
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-sheet {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px 24px 0 0;
+      padding: 22px 20px calc(env(safe-area-inset-bottom, 20px) + 20px) 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.open .modal-sheet {
+      transform: translateY(0);
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    .form-input, .form-textarea, .form-select {
+      background: #121217;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      outline: none;
+      font-family: inherit;
+      width: 100%;
+    }
+
+    .form-textarea {
+      resize: none;
+      height: 70px;
+    }
+
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      border-color: var(--primary-light);
+    }
+
+    .input-with-icon {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-with-icon .form-input {
+      padding-right: 42px;
+    }
+
+    .input-with-icon input[type="date"]::-webkit-calendar-picker-indicator,
+    .input-with-icon input[type="time"]::-webkit-calendar-picker-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .input-icon-svg {
+      position: absolute;
+      right: 14px;
+      width: 20px;
+      height: 20px;
+      pointer-events: none;
+      color: #ffffff;
+      opacity: 0.95;
+      z-index: 1;
+    }
+
+    .switch-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #141419;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    .switch-row span {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #3b3c48;
+      transition: .25s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .25s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <h1>Just My Calendar</h1>
+      <div class="header-actions">
+        <button id="notify-perm-btn" class="nav-btn" title="Переключить напоминания">🔔</button>
+        <button id="today-btn" class="nav-btn" style="color: var(--primary-light); font-weight: 600; font-size: 0.9rem;">Сегодня</button>
+      </div>
+    </header>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-tasks-btn">Задачи по дням</button>
+      <button class="tab-btn" id="tab-events-btn">События & Праздники</button>
+    </div>
+
+    <!-- Вью 1: Календарь + Задачи -->
+    <div id="view-calendar">
+      <div class="calendar-card">
+        <div class="cal-header">
+          <button id="prev-month" class="nav-btn">‹</button>
+          <div id="cal-month-label" class="cal-title">Октябрь 2026</div>
+          <button id="next-month" class="nav-btn">›</button>
+        </div>
+
+        <div class="cal-weekdays">
+          <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+        </div>
+
+        <div id="cal-days" class="cal-grid"></div>
+      </div>
+
+      <div class="content-section" style="margin-top: 16px;">
+        <div class="section-title-wrap">
+          <div id="selected-date-label" class="section-title">Пятница, 9 октября</div>
+          <div id="day-counter" class="task-counter">0 элементов</div>
+        </div>
+
+        <ul id="day-item-list" class="item-list"></ul>
+      </div>
+    </div>
+
+    <!-- Вью 2: События, Дни рождения, Праздники -->
+    <div id="view-events" style="display: none;">
+      <div class="content-section">
+        <div class="section-title-wrap">
+          <div class="section-title">Важные события и даты</div>
+          <div id="events-counter" class="task-counter">0 событий</div>
+        </div>
+
+        <ul id="events-list" class="item-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <button id="open-modal-btn" class="btn-fab" aria-label="Создать">+</button>
+
+  <!-- Модальное окно создания -->
+  <div id="modal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-title" id="modal-heading">Новая запись</div>
+
+      <div class="form-group">
+        <label>Тип записи</label>
+        <select id="item-type-select" class="form-select">
+          <option value="task">Дело / Задача</option>
+          <option value="event">День рождения / Праздник / Важное событие</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="title-input" class="form-input" placeholder="Например: Встреча или ДР" maxlength="100">
+      </div>
+
+      <div class="form-row">
+        <!-- Поле Дата с белой векторной иконкой -->
+        <div class="form-group">
+          <label>Дата</label>
+          <div class="input-with-icon">
+            <input type="date" id="date-input" class="form-input">
+            <svg class="input-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Поле Время с белой векторной иконкой -->
+        <div class="form-group" id="time-group">
+          <label>Время</label>
+          <div class="input-with-icon">
+            <input type="time" id="time-input" class="form-input">
+            <svg class="input-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" id="tag-group">
+        <label>Категория (тег)</label>
+        <select id="tag-select" class="form-select">
+          <option value="work">Работа</option>
+          <option value="home">Дом</option>
+          <option value="hobby">Хобби</option>
+          <option value="meetings">Встречи</option>
+          <option value="care">Процедуры</option>
+          <option value="rest">Отдых</option>
+          <option value="other">Прочее</option>
+        </select>
+      </div>
+
+      <div class="switch-row" id="repeat-group" style="display: none;">
+        <span>Повторять каждый год</span>
+        <label class="switch">
+          <input type="checkbox" id="repeat-yearly-check">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label>Примечания (необязательно)</label>
+        <textarea id="notes-input" class="form-textarea" placeholder="Детали, заметки или адрес..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button id="close-modal-btn" class="btn btn-secondary">Отмена</button>
+        <button id="save-btn" class="btn btn-primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TAG_CONFIG = {
+      work:     { label: 'Работа',    color: '#6366f1' },
+      home:     { label: 'Дом',       color: '#14b8a6' },
+      hobby:    { label: 'Хобби',     color: '#22c55e' },
+      meetings: { label: 'Встречи',   color: '#3b82f6' },
+      care:     { label: 'Процедуры', color: '#ec4899' },
+      rest:     { label: 'Отдых',     color: '#a855f7' },
+      other:    { label: 'Прочее',    color: '#71717a' },
+      event:    { label: 'Событие',   color: '#f59e0b' }
+    };
+
+    const STORAGE_KEY = 'just_my_calendar_data';
+    const NOTIF_SETTINGS_KEY = 'just_my_calendar_notifs';
+
+    let db = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { tasks: [], events: [] };
+    let notifSettings = JSON.parse(localStorage.getItem(NOTIF_SETTINGS_KEY)) || { 
+      enabled: false, 
+      lastMorningTrigger: '', 
+      lastEveningTrigger: '' 
+    };
+
+    let currentDate = new Date();
+    let selectedDate = new Date();
+    let currentTab = 'tasks';
+
+    function saveDB() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    }
+
+    function saveNotifSettings() {
+      localStorage.setItem(NOTIF_SETTINGS_KEY, JSON.stringify(notifSettings));
+    }
+
+    function formatDateToKey(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    const tabTasksBtn = document.getElementById('tab-tasks-btn');
+    const tabEventsBtn = document.getElementById('tab-events-btn');
+    const viewCalendar = document.getElementById('view-calendar');
+    const viewEvents = document.getElementById('view-events');
+
+    const monthLabel = document.getElementById('cal-month-label');
+    const calDays = document.getElementById('cal-days');
+    const prevMonthBtn = document.getElementById('prev-month');
+    const nextMonthBtn = document.getElementById('next-month');
+    const todayBtn = document.getElementById('today-btn');
+    const notifyPermBtn = document.getElementById('notify-perm-btn');
+    const selectedDateLabel = document.getElementById('selected-date-label');
+    const dayCounter = document.getElementById('day-counter');
+    const dayItemList = document.getElementById('day-item-list');
+    const eventsCounter = document.getElementById('events-counter');
+    const eventsList = document.getElementById('events-list');
+
+    const modal = document.getElementById('modal');
+    const openModalBtn = document.getElementById('open-modal-btn');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const saveBtn = document.getElementById('save-btn');
+
+    const itemTypeSelect = document.getElementById('item-type-select');
+    const titleInput = document.getElementById('title-input');
+    const dateInput = document.getElementById('date-input');
+    const timeInput = document.getElementById('time-input');
+    const timeGroup = document.getElementById('time-group');
+    const tagSelect = document.getElementById('tag-select');
+    const tagGroup = document.getElementById('tag-group');
+    const repeatGroup = document.getElementById('repeat-group');
+    const repeatYearlyCheck = document.getElementById('repeat-yearly-check');
+    const notesInput = document.getElementById('notes-input');
+
+    tabTasksBtn.addEventListener('click', () => switchTab('tasks'));
+    tabEventsBtn.addEventListener('click', () => switchTab('events'));
+
+    function switchTab(tab) {
+      currentTab = tab;
+      if (tab === 'tasks') {
+        tabTasksBtn.classList.add('active');
+        tabEventsBtn.classList.remove('active');
+        viewCalendar.style.display = 'block';
+        viewEvents.style.display = 'none';
+        renderCalendar();
+        renderDayView();
+      } else {
+        tabEventsBtn.classList.add('active');
+        tabTasksBtn.classList.remove('active');
+        viewCalendar.style.display = 'none';
+        viewEvents.style.display = 'block';
+        renderEventsTab();
+      }
+    }
+
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      const monthNames = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+      ];
+      monthLabel.textContent = `${monthNames[month]} ${year}`;
+      calDays.innerHTML = '';
+
+      const firstDay = new Date(year, month, 1);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      let startOffset = firstDay.getDay() - 1;
+      if (startOffset === -1) startOffset = 6;
+
+      const prevMonthDays = new Date(year, month, 0).getDate();
+      for (let i = startOffset - 1; i >= 0; i--) {
+        const d = prevMonthDays - i;
+        calDays.appendChild(createCell(d, true, new Date(year, month - 1, d)));
+      }
+
+      const today = new Date();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const thisDate = new Date(year, month, d);
+        const isToday = thisDate.toDateString() === today.toDateString();
+        const isSelected = thisDate.toDateString() === selectedDate.toDateString();
+        calDays.appendChild(createCell(d, false, thisDate, isToday, isSelected));
+      }
+
+      const totalCells = startOffset + daysInMonth;
+      const nextDays = (totalCells > 35 ? 42 : 35) - totalCells;
+      for (let d = 1; d <= nextDays; d++) {
+        calDays.appendChild(createCell(d, true, new Date(year, month + 1, d)));
+      }
+    }
+
+    function createCell(dayNum, isOtherMonth, dateObj, isToday = false, isSelected = false) {
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+      if (isOtherMonth) cell.classList.add('other-month');
+      if (isToday) cell.classList.add('today');
+      if (isSelected) cell.classList.add('selected');
+
+      const numSpan = document.createElement('span');
+      numSpan.className = 'day-cell-num';
+      numSpan.textContent = dayNum;
+      cell.appendChild(numSpan);
+
+      const itemsForDay = getItemsForDate(dateObj);
+      if (itemsForDay.length > 0) {
+        const dotsBox = document.createElement('div');
+        dotsBox.className = 'dots-container';
+
+        itemsForDay.slice(0, 3).forEach(item => {
+          const dot = document.createElement('span');
+          dot.className = 'dot';
+          const tagInfo = TAG_CONFIG[item.tag] || TAG_CONFIG.other;
+          dot.style.background = isSelected ? '#ffffff' : (item.isEvent ? TAG_CONFIG.event.color : tagInfo.color);
+          dotsBox.appendChild(dot);
+        });
+        cell.appendChild(dotsBox);
+      }
+
+      cell.addEventListener('click', () => {
+        selectedDate = new Date(dateObj);
+        currentDate = new Date(dateObj);
+        renderCalendar();
+        renderDayView();
+      });
+
+      return cell;
+    }
+
+    function getEventsForDate(dateObj) {
+      const dateKey = formatDateToKey(dateObj);
+      const [, m, d] = dateKey.split('-');
+
+      return db.events.filter(e => {
+        if (e.repeatYearly) {
+          const [, em, ed] = e.date.split('-');
+          return em === m && ed === d;
+        }
+        return e.date === dateKey;
+      }).map(e => ({ ...e, isEvent: true, tag: 'event' }));
+    }
+
+    function getItemsForDate(dateObj) {
+      const dateKey = formatDateToKey(dateObj);
+      const dayTasks = db.tasks.filter(t => t.date === dateKey);
+      const dayEvents = getEventsForDate(dateObj);
+      return [...dayEvents, ...dayTasks];
+    }
+
+    function renderDayView() {
+      const options = { weekday: 'long', day: 'numeric', month: 'long' };
+      selectedDateLabel.textContent = selectedDate.toLocaleDateString('ru-RU', options);
+
+      const items = getItemsForDate(selectedDate);
+      dayCounter.textContent = `${items.length} ${getPlural(items.length, 'пункт', 'пункта', 'пунктов')}`;
+      dayItemList.innerHTML = '';
+
+      if (items.length === 0) {
+        dayItemList.innerHTML = '<div class="empty-state">На этот день ничего не запланировано.<br>Нажмите «+», чтобы создать дело или событие.</div>';
+        return;
+      }
+
+      items.sort((a, b) => {
+        if (a.isEvent && !b.isEvent) return -1;
+        if (!a.isEvent && b.isEvent) return 1;
+        if (a.time && b.time) return a.time.localeCompare(b.time);
+        if (a.time) return -1;
+        if (b.time) return 1;
+        return 0;
+      });
+
+      items.forEach(item => {
+        dayItemList.appendChild(createItemCard(item));
+      });
+    }
+
+    function createItemCard(item, showDateBadge = false) {
+      const li = document.createElement('li');
+      li.className = `task-item ${item.done ? 'completed' : ''}`;
+
+      const tagInfo = TAG_CONFIG[item.tag] || (item.isEvent ? TAG_CONFIG.event : TAG_CONFIG.other);
+
+      const bar = document.createElement('div');
+      bar.className = 'task-tag-bar';
+      bar.style.background = tagInfo.color;
+
+      let checkBtn = null;
+      if (!item.isEvent) {
+        checkBtn = document.createElement('button');
+        checkBtn.className = 'checkbox-btn';
+        checkBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>';
+        checkBtn.addEventListener('click', () => toggleTaskDone(item.id));
+      } else {
+        const iconBox = document.createElement('div');
+        iconBox.style.fontSize = '1.1rem';
+        iconBox.style.marginTop = '2px';
+        iconBox.textContent = '🎉';
+        li.appendChild(iconBox);
+      }
+
+      const info = document.createElement('div');
+      info.className = 'task-info';
+
+      const headerRow = document.createElement('div');
+      headerRow.className = 'task-header-row';
+
+      const title = document.createElement('span');
+      title.className = 'task-title';
+      title.textContent = item.title;
+      headerRow.appendChild(title);
+
+      const badge = document.createElement('span');
+      badge.className = 'tag-badge';
+      badge.style.background = `${tagInfo.color}25`;
+      badge.style.color = tagInfo.color;
+      badge.textContent = item.isEvent ? (item.repeatYearly ? 'Каждый год' : 'Событие') : tagInfo.label;
+      headerRow.appendChild(badge);
+
+      info.appendChild(headerRow);
+
+      if (showDateBadge && item.date) {
+        const dObj = new Date(item.date + 'T00:00:00');
+        const dBadge = document.createElement('span');
+        dBadge.className = 'task-time';
+        dBadge.textContent = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+        info.appendChild(dBadge);
+      }
+
+      if (item.time) {
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'task-time';
+        timeSpan.textContent = `Время: ${item.time}`;
+        info.appendChild(timeSpan);
+      }
+
+      if (item.notes) {
+        const notesSpan = document.createElement('div');
+        notesSpan.className = 'task-notes';
+        notesSpan.textContent = item.notes;
+        info.appendChild(notesSpan);
+      }
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+      delBtn.addEventListener('click', () => deleteItem(item.id, item.isEvent));
+
+      li.appendChild(bar);
+      if (checkBtn) li.appendChild(checkBtn);
+      li.appendChild(info);
+      li.appendChild(delBtn);
+
+      return li;
+    }
+
+    function renderEventsTab() {
+      eventsCounter.textContent = `${db.events.length} ${getPlural(db.events.length, 'событие', 'события', 'событий')}`;
+      eventsList.innerHTML = '';
+
+      if (db.events.length === 0) {
+        eventsList.innerHTML = '<div class="empty-state">Нет сохраненных праздников и дней рождения.<br>Нажмите «+», чтобы добавить важное событие.</div>';
+        return;
+      }
+
+      const sorted = [...db.events].sort((a, b) => {
+        const [, am, ad] = a.date.split('-').map(Number);
+        const [, bm, bd] = b.date.split('-').map(Number);
+        return (am * 100 + ad) - (bm * 100 + bd);
+      });
+
+      sorted.forEach(ev => {
+        eventsList.appendChild(createItemCard({ ...ev, isEvent: true }, true));
+      });
+    }
+
+    function toggleTaskDone(id) {
+      const t = db.tasks.find(x => x.id === id);
+      if (t) {
+        t.done = !t.done;
+        saveDB();
+        renderDayView();
+      }
+    }
+
+    function deleteItem(id, isEvent) {
+      if (isEvent) {
+        db.events = db.events.filter(x => x.id !== id);
+      } else {
+        db.tasks = db.tasks.filter(x => x.id !== id);
+      }
+      saveDB();
+      renderCalendar();
+      renderDayView();
+      renderEventsTab();
+    }
+
+    function getPlural(n, one, two, five) {
+      n = Math.abs(n) % 100;
+      let n1 = n % 10;
+      if (n > 10 && n < 20) return five;
+      if (n1 > 1 && n1 < 5) return two;
+      if (n1 === 1) return one;
+      return five;
+    }
+
+    itemTypeSelect.addEventListener('change', () => {
+      const isEv = itemTypeSelect.value === 'event';
+      tagGroup.style.display = isEv ? 'none' : 'flex';
+      timeGroup.style.display = isEv ? 'none' : 'flex';
+      repeatGroup.style.display = isEv ? 'flex' : 'none';
+      document.getElementById('modal-heading').textContent = isEv ? 'Новое важное событие' : 'Новая задача';
+    });
+
+    openModalBtn.addEventListener('click', () => {
+      titleInput.value = '';
+      notesInput.value = '';
+      timeInput.value = '';
+      repeatYearlyCheck.checked = false;
+      dateInput.value = formatDateToKey(selectedDate);
+
+      if (currentTab === 'events') {
+        itemTypeSelect.value = 'event';
+        repeatYearlyCheck.checked = true;
+      } else {
+        itemTypeSelect.value = 'task';
+      }
+      itemTypeSelect.dispatchEvent(new Event('change'));
+
+      modal.classList.add('open');
+      setTimeout(() => titleInput.focus(), 150);
+    });
+
+    closeModalBtn.addEventListener('click', () => modal.classList.remove('open'));
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('open');
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const title = titleInput.value.trim();
+      const date = dateInput.value;
+      if (!title || !date) return;
+
+      const isEvent = itemTypeSelect.value === 'event';
+
+      if (isEvent) {
+        db.events.push({
+          id: Date.now().toString(),
+          title: title,
+          date: date,
+          repeatYearly: repeatYearlyCheck.checked,
+          notes: notesInput.value.trim() || null
+        });
+      } else {
+        db.tasks.push({
+          id: Date.now().toString(),
+          title: title,
+          date: date,
+          time: timeInput.value || null,
+          tag: tagSelect.value,
+          notes: notesInput.value.trim() || null,
+          done: false
+        });
+      }
+
+      saveDB();
+      modal.classList.remove('open');
+      renderCalendar();
+      renderDayView();
+      renderEventsTab();
+    });
+
+    prevMonthBtn.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      renderCalendar();
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      renderCalendar();
+    });
+
+    todayBtn.addEventListener('click', () => {
+      currentDate = new Date();
+      selectedDate = new Date();
+      renderCalendar();
+      renderDayView();
+    });
+
+    function updateNotifyBtnUI() {
+      if (notifSettings.enabled) {
+        notifyPermBtn.textContent = '🔔';
+        notifyPermBtn.style.color = '#22c55e';
+        notifyPermBtn.title = 'Уведомления включены (нажмите, чтобы выключить)';
+      } else {
+        notifyPermBtn.textContent = '🔕';
+        notifyPermBtn.style.color = 'var(--text-muted)';
+        notifyPermBtn.title = 'Уведомления отключены (нажмите, чтобы включить)';
+      }
+    }
+
+    notifyPermBtn.addEventListener('click', async () => {
+      if (!('Notification' in window)) {
+        alert('Уведомления не поддерживаются вашим браузером.');
+        return;
+      }
+
+      if (notifSettings.enabled) {
+        notifSettings.enabled = false;
+        saveNotifSettings();
+        updateNotifyBtnUI();
+        return;
+      }
+
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        notifSettings.enabled = true;
+        saveNotifSettings();
+        updateNotifyBtnUI();
+        new Notification('Уведомления активны', {
+          body: 'Сводка на день будет приходить в 09:00, а планы на завтра — в 20:00.'
+        });
+      } else {
+        alert('Разрешение на отправку уведомлений отклонено.');
+        notifSettings.enabled = false;
+        saveNotifSettings();
+        updateNotifyBtnUI();
+      }
+    });
+
+    function sendNotification(title, body) {
+      if (!notifSettings.enabled) return;
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      new Notification(title, { body: body });
+    }
+
+    function runNotificationScheduler() {
+      if (!notifSettings.enabled) return;
+
+      const now = new Date();
+      const currentHours = now.getHours();
+      const currentMinutes = now.getMinutes();
+      const todayKey = formatDateToKey(now);
+      const currentTimeStr = `${String(currentHours).padStart(2, '0')}:${String(currentMinutes).padStart(2, '0')}`;
+
+      if (currentHours === 9 && currentMinutes === 0 && notifSettings.lastMorningTrigger !== todayKey) {
+        const todayItems = getItemsForDate(now);
+        if (todayItems.length > 0) {
+          const names = todayItems.slice(0, 3).map(i => (i.isEvent ? `🎉 ${i.title}` : `• ${i.title}`)).join(', ');
+          const extra = todayItems.length > 3 ? ` и ещё ${todayItems.length - 3}` : '';
+          sendNotification('Планы на сегодня (09:00)', `${todayItems.length} зап.: ${names}${extra}`);
+        }
+        notifSettings.lastMorningTrigger = todayKey;
+        saveNotifSettings();
+      }
+
+      if (currentHours === 20 && currentMinutes === 0 && notifSettings.lastEveningTrigger !== todayKey) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowItems = getItemsForDate(tomorrow);
+
+        if (tomorrowItems.length > 0) {
+          const names = tomorrowItems.slice(0, 3).map(i => (i.isEvent ? `🎉 ${i.title}` : `• ${i.title}`)).join(', ');
+          const extra = tomorrowItems.length > 3 ? ` и ещё ${tomorrowItems.length - 3}` : '';
+          sendNotification('Планы на завтра (20:00)', `Запланировано ${tomorrowItems.length}: ${names}${extra}`);
+        }
+        notifSettings.lastEveningTrigger = todayKey;
+        saveNotifSettings();
+      }
+
+      db.tasks.forEach(t => {
+        if (t.date === todayKey && t.time === currentTimeStr && !t.done && !t.notified) {
+          sendNotification(t.title, t.notes ? t.notes : 'Запланировано на текущее время');
+          t.notified = true;
+          saveDB();
+        }
+      });
+    }
+
+    setInterval(runNotificationScheduler, 60000);
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+          .then((registration) => {
+            console.info('Service Worker registered:', registration.scope);
+          })
+          .catch((error) => {
+            console.error('Service Worker registration failed:', error);
+          });
+      });
+    }
+
+    updateNotifyBtnUI();
+    renderCalendar();
+    renderDayView();
+  </script>
+</body>
+</html>
